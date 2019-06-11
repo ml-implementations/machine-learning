@@ -47,16 +47,21 @@ for feature in range(X_train.shape[1]-1):
 
 # test classifier
 not_spam_prior = l_zeros.shape[0] / X_train.shape[0]
-print("Prior not spam: ", not_spam_prior)
+spam_prior = 1 - not_spam_prior
+print("Prior not spam: {}, prior spam: {}".format(not_spam_prior, spam_prior))
 n_test_samples = X_test.shape[0]
 predictions = np.zeros(n_test_samples, dtype=int)
 score = 0
 
 for idx, sample in enumerate(X_test):
-    y_pred = not_spam_prior
+    y_pred_not_spam = not_spam_prior
+    y_pred_spam = spam_prior
     for feature_idx in range(sample.shape[0]-1):
-        y_pred *= model[feature_idx][0][sample[feature_idx]]
-    predictions[idx] = 0 if y_pred >= 0.5 else 1
+        y_pred_not_spam *= model[feature_idx][0][sample[feature_idx]]
+        y_pred_spam *= model[feature_idx][1][sample[feature_idx]]
+    prob_not_spam = y_pred_not_spam / (y_pred_not_spam + y_pred_spam)
+    prob_spam = y_pred_spam / (y_pred_not_spam + y_pred_spam)
+    predictions[idx] = 0 if prob_not_spam >= 0.5 else 1
     if sample[-1] == predictions[idx]:
         score += 1
 
