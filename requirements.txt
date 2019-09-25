@@ -1,0 +1,6 @@
+numpy
+fire
+opencv-python
+matplotlib
+keras
+tensorflow-gpu

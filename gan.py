@@ -2,7 +2,7 @@ import numpy as np
 import fire
 import cv2
 import matplotlib.pyplot as plt
-from keras.layers import Input, Dense, BatchNormalization
+from keras.layers import Input, Dense, LeakyReLU, Dropout
 from keras.models import Model, load_model, save_model
 from keras.datasets import mnist
 
@@ -26,9 +26,14 @@ class GAN:
     def create_discriminator(self):
         input = Input(self.generator_output)
 
-        x = Dense(256, activation='relu')(input)
-        x = Dense(64, activation='relu')(x)
-        x = BatchNormalization()(x)
+        x = Dense(1024)(input)
+        x = LeakyReLU(0.2)(x)
+        x = Dropout(0.3)(x)
+        x = Dense(512)(x)
+        x = LeakyReLU(0.2)(x)
+        x = Dropout(0.3)(x)
+        x = Dense(256)(x)
+        x = LeakyReLU(0.2)(x)
 
         output = Dense(1, activation='sigmoid')(x)
 
@@ -38,20 +43,22 @@ class GAN:
     def create_generator(self):
         input = Input(self.gan_input)
 
-        x = Dense(256, activation='relu')(input)
-        x = Dense(512, activation='relu')(x)
-        x = BatchNormalization()(x)
+        x = Dense(256)(input)
+        x = LeakyReLU(0.2)(x)
+        x = Dense(512)(x)
+        x = LeakyReLU(0.2)(x)
+        x = Dense(1024)(x)
+        x = LeakyReLU(0.2)(x)
 
-        output = Dense(self.generator_output[0], activation='sigmoid')(x)
+        output = Dense(self.generator_output[0], activation='tanh')(x)
 
         self.generator = Model(input=input, output=output)
         self.generator.compile(loss='binary_crossentropy', optimizer='adam')
 
     def create_gan(self):
-        self.discriminator.trainable = False
-
         input = Input(self.gan_input)
 
+        self.discriminator.trainable = False
         x = self.generator(input)
         output = self.discriminator(x)
 
@@ -60,6 +67,8 @@ class GAN:
 
     def load_data(self):
         (self.X_train, _), (self.X_test, _) = mnist.load_data()
+        self.X_train = (self.X_train.astype(np.float32) - 127.5) / 127.5
+        print(self.X_train.shape)
 
     def train(self):
         self.load_data()
@@ -72,19 +81,18 @@ class GAN:
                 noise = np.random.normal(0, 1, (self.batch_size, 100))
                 minibatch_x = self.X_train[k*self.batch_size:(k+1)*self.batch_size]
                 minibatch_x = np.reshape(minibatch_x, (self.batch_size, 784))
-                minibatch_x = minibatch_x / 255
-                minibatch_y = np.ones(self.batch_size)
+                minibatch_y = np.ones(self.batch_size) - 0.01
                 generated_x = self.generator.predict(noise)
                 generated_y = np.zeros(self.batch_size)
 
                 self.discriminator.trainable = True
-                self.discriminator.fit(minibatch_x, minibatch_y, batch_size=self.batch_size, verbose=0)
-                self.discriminator.fit(generated_x, generated_y, batch_size=self.batch_size, verbose=0)
+                self.discriminator.train_on_batch(minibatch_x, minibatch_y)
+                self.discriminator.train_on_batch(generated_x, generated_y)
 
-            noise = np.random.normal(0, 1, (self.batch_size, 100, ))
-            gan_y = np.ones(self.batch_size)
+                noise = np.random.normal(0, 1, (self.batch_size, 100, ))
+                gan_y = np.ones(self.batch_size)
 
-            self.gan.fit(noise, gan_y, batch_size=self.batch_size, verbose=0)
+                self.gan.train_on_batch(noise, gan_y)
 
             if i % 5 == 0:
                 self.sample_gan(i)
