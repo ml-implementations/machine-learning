@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 epsilons = [0, .05, .1, .15, .2, .25, .3]
 use_cuda = True
-pretrained_model = "../data/lenet_mnist_model.pth"
+pretrained_model = "data/lenet_mnist_model.pth"
 
 
 # model under attack

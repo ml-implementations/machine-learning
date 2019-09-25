@@ -83,7 +83,7 @@ def test_model(model, priors, test):
 
 
 def main(train_size=.7):
-    train, test = preprocess_data(train_size, '../data/spambase.data')
+    train, test = preprocess_data(train_size, 'data/spambase.data')
     model = train_model(train)
     priors = get_priors(train)
     accuracy = test_model(model, priors, test)
