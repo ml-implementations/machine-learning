@@ -1,2 +1,4 @@
 /.idea/
 /gan_generated/
+/data/images/
+/models/vgg_conv_weights.pth
