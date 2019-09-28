@@ -28,7 +28,7 @@ class PNN:
         self.cifar10_optimizer = None
 
         self.mnist_net = None
-        self.mnist_epochs = 5
+        self.mnist_epochs = 50
         self.mnist_train_loader = None
         self.mnist_test_loader = None
         self.mnist_path = 'models/mnist'
@@ -135,7 +135,8 @@ class PNN:
         with torch.no_grad():
             for data in self.mnist_test_loader:
                 images, labels = data
-                outputs = self.mnist_net.forward(torch.tensor(images, device='cuda'))
+                images = torch.flatten(torch.tensor(images, device='cuda'), start_dim=1)
+                outputs = self.mnist_net.forward(images)
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -152,7 +153,12 @@ class PNN:
             self.cifar10_net.eval()
 
     def load_mnist(self):
-        self.mnist_net = FashionMNISTNet()
+        if self.mode == 'train_mnist':
+            self.mnist_net = FashionMNISTNet()
+        else:
+            self.mnist_net = FashionMNISTNet()
+            self.mnist_net.load_state_dict(torch.load(self.mnist_path))
+            self.mnist_net.eval()
 
     def save_cifar10(self):
         torch.save(self.cifar10_net.state_dict(), self.cifar10_path)
@@ -175,6 +181,8 @@ class PNN:
             self.mnist_optimizer = optim.SGD(self.mnist_net.parameters(), lr=0.001, momentum=0.9)
             self.train_mnist()
             self.save_mnist()
+        elif self.mode == 'test_mnist':
+            self.test_mnist()
 
 
 class Cifar10Net(nn.Module):
