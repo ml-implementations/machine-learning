@@ -27,7 +27,7 @@ class NAAS:
         self.transforms_post = None
 
         # device
-        self.device = "cpu"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # images
         self.content = None
@@ -36,7 +36,7 @@ class NAAS:
 
         # image characteristics
         self.images_dir = 'data/images/'
-        self.images_size = (512, 512)
+        self.images_size = (256, 256)
         self.images_shape = (3, *self.images_size)
 
         # training
@@ -119,7 +119,7 @@ class NAAS:
                 total_loss.backward()
 
                 print("Iteration: ", i + 1, "\tLoss: ", total_loss)
-                img = self.transforms_post(self.opt.clone())
+                img = self.transforms_post(self.opt.clone().cpu())
                 img.save(self.images_dir + 'opt_{}.jpg'.format(i))
 
                 return total_loss
