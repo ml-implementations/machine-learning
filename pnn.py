@@ -16,8 +16,8 @@ except RuntimeError:
 
 
 class PNN:
-    def __init__(self):
-        self.mode = 'train_cifar10_pnn'
+    def __init__(self, mode='train_cifar10_pnn'):
+        self.mode = mode
         self.cifar10_train_loader = None
         self.cifar10_test_loader = None
         self.cifar10_net = None
@@ -45,31 +45,31 @@ class PNN:
 
     def load_cifar10_dataset(self):
         transform = transforms.Compose(
-            [transforms.Grayscale(),
+            [#transforms.Grayscale(),
              transforms.ToTensor()]
         )
 
-        train_set = torchvision.datasets.CIFAR10(root='./data/cifar10', train=True, download=False, transform=transform)
+        train_set = torchvision.datasets.CIFAR10(root='./data/cifar10', train=True, download=True, transform=transform)
         self.cifar10_train_loader = torch.utils.data.DataLoader(train_set, batch_size=8,
-                                                                shuffle=True, num_workers=1)
+                                                                shuffle=True, num_workers=0)
 
-        test_set = torchvision.datasets.CIFAR10(root='./data/cifar10', train=False, download=False, transform=transform)
+        test_set = torchvision.datasets.CIFAR10(root='./data/cifar10', train=False, download=True, transform=transform)
         self.cifar10_test_loader = torch.utils.data.DataLoader(test_set, batch_size=4,
-                                                               shuffle=False, num_workers=1)
+                                                               shuffle=False, num_workers=0)
 
     def load_fashion_mnist_dataset(self):
         transform = transforms.Compose(
             [transforms.ToTensor()])
 
-        train_set = torchvision.datasets.FashionMNIST(root='./data/fashion-mnist', train=True, download=False,
+        train_set = torchvision.datasets.FashionMNIST(root='./data/fashion-mnist', train=True, download=True,
                                                       transform=transform)
         self.mnist_train_loader = torch.utils.data.DataLoader(train_set, batch_size=8,
-                                                              shuffle=True, num_workers=1)
+                                                              shuffle=True, num_workers=0)
 
-        test_set = torchvision.datasets.FashionMNIST(root='./data/fashion-mnist', train=False, download=False,
+        test_set = torchvision.datasets.FashionMNIST(root='./data/fashion-mnist', train=False, download=True,
                                                      transform=transform)
         self.mnist_test_loader = torch.utils.data.DataLoader(test_set, batch_size=4,
-                                                             shuffle=False, num_workers=1)
+                                                             shuffle=False, num_workers=0)
 
     def train_cifar10(self):
 
@@ -83,8 +83,8 @@ class PNN:
                 self.cifar10_optimizer.zero_grad()
 
                 # forward + backward + optimize
-                inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
-                outputs = self.cifar10_net.forward(inputs)
+                # inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
+                outputs = self.cifar10_net.forward(torch.tensor(inputs, device='cuda'))
                 loss = self.cifar10_criterion(outputs, labels)
                 loss.backward()
                 self.cifar10_optimizer.step()
@@ -109,8 +109,8 @@ class PNN:
                 self.mnist_optimizer.zero_grad()
 
                 # forward + backward + optimize
-                inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
-                outputs, outputs_layers = self.mnist_net.forward(inputs)
+                # inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
+                outputs, outputs_layers = self.mnist_net.forward(torch.tensor(inputs, device='cuda'))
                 loss = self.mnist_criterion(outputs, labels)
                 loss.backward()
                 self.mnist_optimizer.step()
@@ -145,11 +145,12 @@ class PNN:
                 self.cifar10_optimizer_pnn.zero_grad()
 
                 # forward + backward + optimize
-                inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
-                inputs_mnist = torch.flatten(torch.tensor(inputs_mnist, device='cuda'), start_dim=1)
-                outputs_mnist, outputs_layers_mnist = self.mnist_net.forward(inputs_mnist)
-                outputs = self.cifar10_net_pnn.forward(inputs,
-                                                       outputs_layers_mnist['fc1'],
+                #inputs = torch.flatten(torch.tensor(inputs, device='cuda'), start_dim=1)
+
+                #inputs_mnist = torch.flatten(torch.tensor(inputs_mnist, device='cuda'), start_dim=1)
+                outputs_mnist, outputs_layers_mnist = self.mnist_net.forward(torch.tensor(inputs_mnist, device='cuda'))
+                outputs = self.cifar10_net_pnn.forward(torch.tensor(inputs, device='cuda'),
+                                                       outputs_layers_mnist['conv1'],
                                                        outputs_layers_mnist['fc2'],
                                                        outputs_layers_mnist['fc3'],
                                                        outputs_layers_mnist['fc4'])
@@ -226,12 +227,14 @@ class PNN:
             self.mnist_net = FashionMNISTNet()
             self.mnist_net.load_state_dict(torch.load(self.mnist_path))
             self.mnist_net.eval()
+            for p in self.mnist_net.parameters():
+                p.requires_grad = False
 
     def load_cifar10_pnn(self):
         if self.mode == 'train_cifar10_pnn':
-            self.cifar10_net_pnn = Cifar10NetPNN(128, 64, 32, 10)
+            self.cifar10_net_pnn = Cifar10NetPNN(3, 64, 32, 10)
         elif self.mode == 'test_cifar10_pnn':
-            self.cifar10_net_pnn = Cifar10NetPNN(128, 64, 32, 10)
+            self.cifar10_net_pnn = Cifar10NetPNN(3, 64, 32, 10)
             self.cifar10_net_pnn.load_state_dict(torch.load(self.cifar10_path_pnn))
             self.cifar10_net_pnn.eval()
 
@@ -273,15 +276,16 @@ class PNN:
 class Cifar10Net(nn.Module):
     def __init__(self):
         super(Cifar10Net, self).__init__()
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 400)
-        self.fc3 = nn.Linear(400, 120)
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv2 = nn.Conv2d(6, 8, 5, stride=2)
+        self.fc3 = nn.Linear(12 * 12 * 8, 120)
         self.fc4 = nn.Linear(120, 84)
         self.fc5 = nn.Linear(84, 10)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         x = F.softmax(self.fc5(x), dim=1)
@@ -293,8 +297,8 @@ class FashionMNISTNet(nn.Module):
         super(FashionMNISTNet, self).__init__()
 
         # Defining the layers, 128, 64, 10 units each
-        self.fc1 = nn.Linear(784, 128)
-        self.fc2 = nn.Linear(128, 64)
+        self.conv1 = nn.Conv2d(1, 3, 5, stride=2)
+        self.fc2 = nn.Linear(12 * 12 * 3, 64)
         self.fc3 = nn.Linear(64, 32)
 
         # Output layer, 10 units - one for each digit
@@ -302,10 +306,9 @@ class FashionMNISTNet(nn.Module):
 
     def forward(self, x):
         ''' Forward pass through the network, returns the output logits '''
-
         out = dict()
-        out['fc1'] = F.relu(self.fc1(x))
-        out['fc2'] = F.relu(self.fc2(out['fc1']))
+        out['conv1'] = F.relu(self.conv1(x))
+        out['fc2'] = F.relu(self.fc2(torch.flatten(out['conv1'], start_dim=1)))
         out['fc3'] = F.relu(self.fc3(out['fc2']))
         out['fc4'] = F.softmax(self.fc4(out['fc3']), dim=1)
 
@@ -313,27 +316,32 @@ class FashionMNISTNet(nn.Module):
 
 
 class Cifar10NetPNN(nn.Module):
-    def __init__(self, fc1_in, fc2_in, fc3_in, fc4_in):
+    def __init__(self, conv1_in, fc2_in, fc3_in, fc4_in):
         super(Cifar10NetPNN, self).__init__()
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 400)
-        self.fc3 = nn.Linear(400, 120)
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv2 = nn.Conv2d(6, 8, 5, stride=2)
+        self.fc3 = nn.Linear(12 * 12 * 8, 120)
         self.fc4 = nn.Linear(120, 84)
         self.fc5 = nn.Linear(84, 10)
 
-        self.fc1_mnist = nn.Linear(fc1_in, 400)
-        self.fc2_mnist = nn.Linear(fc2_in, 120)
+        self.conv1_mnist = nn.Conv2d(conv1_in, 8, 3, padding=1)
+        self.fc2_mnist = nn.Linear(fc2_in, 120) # fc2_in = 588
         self.fc3_mnist = nn.Linear(fc3_in, 84)
         self.fc4_mnist = nn.Linear(fc4_in, 10)
 
-    def forward(self, x, fc1_mnist_out, fc2_mnist_out, fc3_mnist_out, fc4_mnist_out):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x) + self.fc1_mnist(fc1_mnist_out))
+    def forward(self, x, conv1_mnist_out, fc2_mnist_out, fc3_mnist_out, fc4_mnist_out):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x) + self.conv1_mnist(conv1_mnist_out))
+        x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc3(x) + self.fc2_mnist(fc2_mnist_out))
         x = F.relu(self.fc4(x) + self.fc3_mnist(fc3_mnist_out))
         x = F.softmax(self.fc5(x), dim=1)
         return x
 
 
-if __name__ == '__main__':
+def main():
     fire.Fire(PNN)
+
+
+if __name__ == '__main__':
+    main()
