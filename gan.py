@@ -36,6 +36,8 @@ class GAN:
         opt = Adam(lr=0.0002, beta_1=0.5)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
+        model.summary()
+
         self.discriminator = model
 
     def create_generator(self):
@@ -126,11 +128,10 @@ class GAN:
         plt.show()
 
     def test(self):
-        generator = load_model(self.generator_model_path)
         generated = []
         for i in range(self.test_count):
-            noise = self.generate_latent_points(100, self.batch_size)
-            img = generator.predict(noise)
+            noise = np.random.normal(0, 1, (1, 100))
+            img = self.generator.predict(noise)
             img = np.squeeze(img, axis=0)
             img = np.squeeze(img, axis=-1)
             generated.append(img * 255.0)
