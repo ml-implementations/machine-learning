@@ -16,5 +16,4 @@ The repo includes the following algorithms:
 7. **Variational Autoencoder (VAE)**  
 [Paper: [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114)]
 8. **Neural Network Compression**  
-[Paper: [BinaryConnect: Training Deep Neural Networks with binary weights during propagations]
-(https://arxiv.org/abs/1511.00363)]
+[Paper: [BinaryConnect: Training Deep Neural Networks with binary weights during propagations](https://arxiv.org/abs/1511.00363)]
