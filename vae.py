@@ -34,8 +34,7 @@ class VAE:
         self.test_mnist_dataloader = None
         self.mnist_epochs = 50
         self.model_opt = Adam(self.model.parameters(), lr=0.0002, betas=(0.5, 0.999))
-        self.generated_loss = torch.nn.BCELoss()
-        self.latent_loss = torch.nn.KLDivLoss()
+        self.generated_loss = torch.nn.BCELoss(reduction="sum")
         self.dist = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
 
         self.model_path = 'models/vae.hdf5'
@@ -108,17 +107,6 @@ class VAE:
             print("Epoch: ", epoch + 1, " Loss: ", total_loss)
 
         print('Finished Training')
-
-    def test(self):
-        self.load_model()
-        sample_vector = torch.randn(self.batch_size, self.latent_vector_size)
-        generated = self.model.decode(sample_vector)
-        self.plot_results(generated)
-
-    def load_model(self):
-        self.model = Model()
-        self.model.load_state_dict(torch.load(self.model_path))
-        self.model.eval()
 
 
 class Model(torch.nn.Module):

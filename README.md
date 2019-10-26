@@ -17,3 +17,5 @@ The repo includes the following algorithms:
 [Paper: [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114)]
 8. **Model Compression**  
 [Paper: [BinaryConnect: Training Deep Neural Networks with binary weights during propagations](https://arxiv.org/abs/1511.00363)]
+9. **Neural Machine Translation**  
+[Paper: [Sequence to Sequence Learning with Neural Networks](https://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf)]
