@@ -1,3 +1,4 @@
+PIL
 numpy
 fire
 opencv-python
