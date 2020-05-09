@@ -1,3 +1,5 @@
+sklearn
+seaborn
 tensorflow
 PIL
 numpy
