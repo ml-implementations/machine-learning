@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sklearn.datasets as data
 from scipy.cluster import hierarchy
+from collections import deque
 
 
 class Utils:
@@ -110,27 +111,47 @@ class Utils:
         return dendrogram
 
     @staticmethod
-    def condense_cluster_tree(hierarchy_tree, hierarchy_clusters, min_cluster_size):
-        points_lambda = dict()
-        clusters_lambda = dict()
+    def condense_cluster_tree(hierarchy_tree, hierarchy_clusters, min_cluster_size, num_points):
+        clusters_stabilities = dict()
 
-        for k, v in hierarchy_tree.items():
-            if v[0][1] < min_cluster_size:
-                for i in hierarchy_clusters[v[0][0]]:
-                    points_lambda.update({i: 1/v[2]})
-            else:
-                clusters_lambda.update({v[0][0]: 1/v[2]})
-            if v[1][1] < min_cluster_size:
-                for j in hierarchy_clusters[v[1][0]]:
-                    points_lambda.update({j: 1/v[2]})
-            else:
-                clusters_lambda.update({v[1][0]: 1/v[2]})
+        start = (num_points*2) - 2
 
-        return points_lambda, clusters_lambda
+        clusters_stack = deque()
+        clusters_stack.append(start)
+
+        while len(clusters_stack):
+            i = clusters_stack.pop()
+            v = hierarchy_tree[i]
+            cluster_birth = 1/v[2]
+            points_lambda = []
+
+            while v[0][1] < min_cluster_size or v[1][1] < min_cluster_size:
+                next_v = None
+                if v[0][1] < min_cluster_size:
+                    for _ in hierarchy_clusters[v[0][0]]:
+                        points_lambda.append(1/v[2])
+                else:
+                    next_v = v[0][0]
+                if v[1][1] < min_cluster_size:
+                    for _ in hierarchy_clusters[v[1][0]]:
+                        points_lambda.append(1/v[2])
+                else:
+                    next_v = v[1][0]
+                v = hierarchy_tree[next_v]
+
+            cluster_death_points_fall = len(hierarchy_clusters[i]) - len(points_lambda)
+            cluster_death = 1/v[2]
+            sum_stabilities = (cluster_birth - cluster_death) * cluster_death_points_fall
+            sum_stabilities += -np.sum(np.array(points_lambda) - cluster_birth)
+            clusters_stabilities.update({i: sum_stabilities})
+
+            clusters_stack.append(v[0][0])
+            clusters_stack.append(v[1][0])
+
+        return clusters_stabilities
 
     @staticmethod
-    def extract_clusters(hierarchy_clusters, points_lambda, clusters_lambda):
-        clusters_stabilities = dict()
+    def extract_clusters(hierarchy_clusters, clusters_stabilities):
 
         for k, v in hierarchy_clusters.items()[:-1]:
             pass
@@ -146,6 +167,6 @@ if __name__ == '__main__':
     e = Utils.prims_algorithm(transformed_dist)
     plot = Utils.plot_data(data, e, transformed_dist)
     Z, tree, clusters = Utils.cluster_hierarchy(e, num_points=transformed_dist.shape[0])
-    dn = Utils.plot_dendrogram(Z)
-    p_lambda, c_lambda = Utils.condense_cluster_tree(tree, clusters, min_cluster_size=5)
-    clusters = Utils.extract_clusters(clusters, p_lambda, c_lambda)
+    # dn = Utils.plot_dendrogram(Z)
+    c_stabilities = Utils.condense_cluster_tree(tree, clusters, min_cluster_size=5, num_points=transformed_dist.shape[0])
+    clusters = Utils.extract_clusters(clusters, c_stabilities)
