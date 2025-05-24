@@ -19,3 +19,5 @@ The repo includes the following algorithms:
 [Paper: [BinaryConnect: Training Deep Neural Networks with binary weights during propagations](https://arxiv.org/abs/1511.00363)]
 9. **Neural Machine Translation**  
 [Paper: [Sequence to Sequence Learning with Neural Networks](https://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf)]
+10. **Transformers**  
+[Paper: [Attention Is All You Need](https://arxiv.org/abs/1706.03762)]
